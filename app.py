@@ -9,6 +9,12 @@ engine = pyttsx3.init()
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[1].id)
 engine.setProperty('rate', 150)
+from pymongo import MongoClient
+from datetime import datetime
+
+client = MongoClient("mongodb://localhost:27017")  # or Atlas URI
+db = client["voice_email_app"]
+email_logs = db["sent_emails"]
 
 
 def speak(str):
@@ -17,33 +23,62 @@ def speak(str):
  engine.runAndWait()
 def listen():
  with sr.Microphone() as source:
- r.adjust_for_ambient_noise(source)
+  r.adjust_for_ambient_noise(source)
  str = "Speak Now:"
  speak(str)
  audio = r.listen(source)
  try:
- text = r.recognize_google(audio)
- return text
+  text = r.recognize_google(audio)
+  return text
  except:
- str = "Sorry could not recognize what you said"
+    str = "Sorry could not recognize what you said"
 
 
 
 speak(str)
+# def sendmail():
+#  rec = "nehasubash111@gmail.com"
+#  str = "Please speak the body of your email"
+#  speak(str)
+#  msg = listen()
+#  str = "You have spoken the message"
+#  speak(str)
+#  speak(msg)
+#  server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+#  server.login(unm, pwd)
 def sendmail():
- rec = "nehasubash111@gmail.com"
- str = "Please speak the body of your email"
- speak(str)
- msg = listen()
- str = "You have spoken the message"
- speak(str)
- speak(msg)
- server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
- server.login(unm, pwd)
+    rec = "nehasubash111@gmail.com"
+    speak("Please speak the body of your email")
+    msg = listen()
 
+    if not msg:
+        speak("No message received. Aborting send.")
+        return
+
+    speak("You have spoken the message")
+    speak(msg)
+
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(unm, pwd)
+        server.sendmail(unm, rec, msg)
+        server.quit()
+        status = "Sent"
+        speak("The mail has been sent")
+    except Exception as e:
+        status = f"Failed: {str(e)}"
+        speak("Failed to send the email")
+
+    # Store in MongoDB
+    email_logs.insert_one({
+        "recipient": rec,
+        "message": msg,
+        "status": status,
+        "timestamp": datetime.now()
+    })
 
 str = "The mail has been sent"
- speak(str)
+speak(str)
 def readmail():
  server = e.connect("imap.gmail.com", unm, pwd)
  server.listids()
@@ -51,7 +86,7 @@ def readmail():
  speak(str)
  a = listen()
  if (a == "Two"):
- a = "2"
+  a = "2"
 
 
 
@@ -73,25 +108,22 @@ speak(str)
 while (1):
  str = "What do you want to do?"
  speak(str)
- str = "Speak SEND to Send email Speak READ to Read Inbox Speak
-EXIT to Exit"
+ str = "Speak SEND to Send email Speak READ to Read Inbox Speak EXIT to Exit"
  speak(str)
  ch = listen()
  if (ch == 'send'):
- str = "You have chosen to send an email"
- speak(str)
- sendmail()
+    str = "You have chosen to send an email"
+    speak(str)
+    sendmail()
  elif (ch == 'read'):
- str = "You have chosen to read mail"
- speak(str)
-
-
- readmail()
+    str = "You have chosen to read mail"
+    speak(str)
+    readmail()
  elif (ch == 'exit'):
- str = "You have chosen to exit, bye bye"
- speak(str)
- exit(1)
+    str = "You have chosen to exit, bye bye"
+    speak(str)
+    exit(1)
  else:
- str = "Invalid choice, you said:"
- speak(str)
- speak(ch)
+    str = "Invalid choice, you said:"
+    speak(str)
+    speak(ch)
